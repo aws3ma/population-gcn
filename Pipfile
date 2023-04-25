@@ -4,12 +4,12 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-tensorflow = "==2.10"
 networkx = "*"
 scipy = "*"
 nilearn = "*"
 numpy = "*"
 matplotlib = "*"
+tensorflow = "*"
 
 [dev-packages]
 ipykernel = "*"

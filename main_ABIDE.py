@@ -119,7 +119,7 @@ def main():
                                                              'uses chebyshev polynomials, '
                                                              'options: gcn, gcn_cheby, dense )')
     parser.add_argument('--seed', default=123, type=int, help='Seed for random initialisation (default: 123)')
-    parser.add_argument('--folds', default=11, type=int, help='For cross validation, specifies which fold will be '
+    parser.add_argument('--folds', default=0, type=int, help='For cross validation, specifies which fold will be '
                                                              'used. All folds are used if set to 11 (default: 11)')
     parser.add_argument('--save', default=1, type=int, help='Parameter that specifies if results have to be saved. '
                                                             'Results will be saved if set to 1 (default: 1)')

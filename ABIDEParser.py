@@ -20,6 +20,7 @@ import numpy as np
 import scipy.io as sio
 
 from sklearn.linear_model import RidgeClassifier
+from sklearn.linear_model import LogisticRegression
 from sklearn.feature_selection import RFE
 from nilearn import connectome
 
@@ -157,7 +158,7 @@ def feature_selection(matrix, labels, train_ind, fnum):
         x_data      : feature matrix of lower dimension (num_subjects x fnum)
     """
 
-    estimator = RidgeClassifier()
+    estimator = LogisticRegression()
     selector = RFE(estimator=estimator, n_features_to_select=fnum, step=100, verbose=1)
 
     featureX = matrix[train_ind, :]
