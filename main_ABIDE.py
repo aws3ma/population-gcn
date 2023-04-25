@@ -96,6 +96,7 @@ def train_fold(train_ind, test_ind, val_ind, graph_feat, features, y, y_data, pa
 
 
 def main():
+    
     parser = argparse.ArgumentParser(description='Graph CNNs for population graphs: '
                                                  'classification of the ABIDE dataset')
     parser.add_argument('--dropout', default=0.3, type=float,
@@ -118,7 +119,7 @@ def main():
                                                              'uses chebyshev polynomials, '
                                                              'options: gcn, gcn_cheby, dense )')
     parser.add_argument('--seed', default=123, type=int, help='Seed for random initialisation (default: 123)')
-    parser.add_argument('--folds', default=0, type=int, help='For cross validation, specifies which fold will be '
+    parser.add_argument('--folds', default=11, type=int, help='For cross validation, specifies which fold will be '
                                                              'used. All folds are used if set to 11 (default: 11)')
     parser.add_argument('--save', default=1, type=int, help='Parameter that specifies if results have to be saved. '
                                                             'Results will be saved if set to 1 (default: 1)')
@@ -163,7 +164,7 @@ def main():
     # Initialise variables for class labels and acquisition sites
     y_data = np.zeros([num_nodes, num_classes])
     y = np.zeros([num_nodes, 1])
-    site = np.zeros([num_nodes, 1], dtype=np.int)
+    site = np.zeros([num_nodes, 1], dtype=int)
 
     # Get class labels and acquisition site for all subjects
     for i in range(num_nodes):
@@ -218,7 +219,7 @@ def main():
 
     if args.save == 1:
         result_name = 'ABIDE_classification.mat'
-        sio.savemat('/vol/medic02/users/sparisot/python/graphCNN/results/' + result_name + '.mat',
+        sio.savemat('./results/' + result_name ,
                     {'lin': scores_lin, 'lin_auc': scores_auc_lin,
                      'acc': scores_acc, 'auc': scores_auc, 'folds': fold_size})
 

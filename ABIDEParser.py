@@ -30,9 +30,9 @@ from nilearn import connectome
 pipeline = 'cpac'
 
 # Input data variables
-root_folder = '/path/to/data/'
-data_folder = os.path.join(root_folder, 'ABIDE_pcp/cpac/filt_noglobal')
-phenotype = os.path.join(root_folder, 'ABIDE_pcp/Phenotypic_V1_0b_preprocessed1.csv')
+root_folder = '.'
+data_folder = os.path.join(root_folder, 'filt_noglobal')
+phenotype = os.path.join(root_folder, 'filt_noglobal/Phenotypic_V1_0b_preprocessed1.csv')
 
 
 def fetch_filenames(subject_IDs, file_type):
@@ -158,7 +158,7 @@ def feature_selection(matrix, labels, train_ind, fnum):
     """
 
     estimator = RidgeClassifier()
-    selector = RFE(estimator, fnum, step=100, verbose=1)
+    selector = RFE(estimator=estimator, n_features_to_select=fnum, step=100, verbose=1)
 
     featureX = matrix[train_ind, :]
     featureY = labels[train_ind]

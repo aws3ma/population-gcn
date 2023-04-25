@@ -24,7 +24,7 @@ pipeline = 'cpac'
 
 # Input data variables
 num_subjects = 871  # Number of subjects
-root_folder = '/path/to/data/'
+root_folder = 'C:/Users/ousem/nilearn_data'
 data_folder = os.path.join(root_folder, 'ABIDE_pcp/cpac/filt_noglobal')
 
 # Files to fetch
@@ -37,7 +37,7 @@ if not os.path.exists(data_folder): os.makedirs(data_folder)
 shutil.copyfile('./subject_IDs.txt', os.path.join(data_folder, 'subject_IDs.txt'))
 
 # Download database files
-abide = datasets.fetch_abide_pcp(data_dir=root_folder, n_subjects=num_subjects, pipeline=pipeline,
+abide = datasets.fetch_abide_pcp( n_subjects=num_subjects, pipeline=pipeline,
                                  band_pass_filtering=True, global_signal_regression=False, derivatives=files)
 
 
