@@ -22,7 +22,13 @@ from scipy import sparse
 from joblib import Parallel, delayed
 from sklearn.model_selection import StratifiedKFold
 from scipy.spatial import distance
-from sklearn.linear_model import RidgeClassifier
+from sklearn.linear_model import RidgeClassifier, LogisticRegression
+from sklearn.svm import SVC
+from sklearn.naive_bayes import GaussianNB
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.tree import DecisionTreeClassifier
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
 import sklearn.metrics
 import scipy.io as sio
 
@@ -55,10 +61,12 @@ def train_fold(train_ind, test_ind, val_ind, graph_feat, features, y, y_data, pa
     print(len(train_ind))
 
     # selection of a subset of data if running experiments with a subset of the training set
-    labeled_ind = Reader.site_percentage(train_ind, params['num_training'], subject_IDs)
+    labeled_ind = Reader.site_percentage(
+        train_ind, params['num_training'], subject_IDs)
 
     # feature selection/dimensionality reduction step
-    x_data = Reader.feature_selection(features, y, labeled_ind, params['num_features'])
+    x_data = Reader.feature_selection(
+        features, y, labeled_ind, params['num_features'])
 
     fold_size = len(test_ind)
 
@@ -70,14 +78,20 @@ def train_fold(train_ind, test_ind, val_ind, graph_feat, features, y, y_data, pa
     # Get affinity from similarity matrix
     sparse_graph = np.exp(- dist ** 2 / (2 * sigma ** 2))
     final_graph = graph_feat * sparse_graph
-
+    
     # Linear classifier
-    clf = RidgeClassifier()
+    clf = LinearDiscriminantAnalysis()
     clf.fit(x_data[train_ind, :], y[train_ind].ravel())
     # Compute the accuracy
     lin_acc = clf.score(x_data[test_ind, :], y[test_ind].ravel())
     # Compute the AUC
-    pred = clf.decision_function(x_data[test_ind, :])
+    decision_function = getattr(clf, "decision_function", None)
+    if callable(decision_function):
+        pred = clf.decision_function(x_data[test_ind, :])
+    else:
+        pred = clf.predict(x_data[test_ind, :])
+
+    # pred = clf.decision_function(x_data[test_ind, :])
     lin_auc = sklearn.metrics.roc_auc_score(y[test_ind] - 1, pred)
 
     print("Linear Accuracy: " + str(lin_acc))
@@ -96,19 +110,22 @@ def train_fold(train_ind, test_ind, val_ind, graph_feat, features, y, y_data, pa
 
 
 def main():
-    
+
     parser = argparse.ArgumentParser(description='Graph CNNs for population graphs: '
                                                  'classification of the ABIDE dataset')
     parser.add_argument('--dropout', default=0.3, type=float,
                         help='Dropout rate (1 - keep probability) (default: 0.3)')
     parser.add_argument('--decay', default=5e-4, type=float,
                         help='Weight for L2 loss on embedding matrix (default: 5e-4)')
-    parser.add_argument('--hidden', default=16, type=int, help='Number of filters in hidden layers (default: 16)')
-    parser.add_argument('--lrate', default=0.005, type=float, help='Initial learning rate (default: 0.005)')
+    parser.add_argument('--hidden', default=16, type=int,
+                        help='Number of filters in hidden layers (default: 16)')
+    parser.add_argument('--lrate', default=0.005, type=float,
+                        help='Initial learning rate (default: 0.005)')
     parser.add_argument('--atlas', default='ho', help='atlas for network construction (node definition) (default: ho, '
                                                       'see preprocessed-connectomes-project.org/abide/Pipelines.html '
                                                       'for more options )')
-    parser.add_argument('--epochs', default=150, type=int, help='Number of epochs to train')
+    parser.add_argument('--epochs', default=10, type=int,
+                        help='Number of epochs to train')
     parser.add_argument('--num_features', default=2000, type=int, help='Number of features to keep for '
                                                                        'the feature selection step (default: 2000)')
     parser.add_argument('--num_training', default=1.0, type=float, help='Percentage of training set used for '
@@ -118,7 +135,8 @@ def main():
     parser.add_argument('--model', default='gcn_cheby', help='gcn model used (default: gcn_cheby, '
                                                              'uses chebyshev polynomials, '
                                                              'options: gcn, gcn_cheby, dense )')
-    parser.add_argument('--seed', default=123, type=int, help='Seed for random initialisation (default: 123)')
+    parser.add_argument('--seed', default=123, type=int,
+                        help='Seed for random initialisation (default: 123)')
     parser.add_argument('--folds', default=0, type=int, help='For cross validation, specifies which fold will be '
                                                              'used. All folds are used if set to 11 (default: 11)')
     parser.add_argument('--save', default=1, type=int, help='Parameter that specifies if results have to be saved. '
@@ -133,22 +151,34 @@ def main():
 
     # GCN Parameters
     params = dict()
-    params['model'] = args.model                    # gcn model using chebyshev polynomials
+    # gcn model using chebyshev polynomials
+    params['model'] = args.model
     params['lrate'] = args.lrate                    # Initial learning rate
     params['epochs'] = args.epochs                  # Number of epochs to train
-    params['dropout'] = args.dropout                # Dropout rate (1 - keep probability)
-    params['hidden'] = args.hidden                  # Number of units in hidden layers
-    params['decay'] = args.decay                    # Weight for L2 loss on embedding matrix.
-    params['early_stopping'] = params['epochs']     # Tolerance for early stopping (# of epochs). No early stopping if set to param.epochs
-    params['max_degree'] = 3                        # Maximum Chebyshev polynomial degree.
-    params['depth'] = args.depth                    # number of additional hidden layers in the GCN. Total number of hidden layers: 1+depth
-    params['seed'] = args.seed                      # seed for random initialisation
+    # Dropout rate (1 - keep probability)
+    params['dropout'] = args.dropout
+    # Number of units in hidden layers
+    params['hidden'] = args.hidden
+    # Weight for L2 loss on embedding matrix.
+    params['decay'] = args.decay
+    # Tolerance for early stopping (# of epochs). No early stopping if set to param.epochs
+    params['early_stopping'] = params['epochs']
+    # Maximum Chebyshev polynomial degree.
+    params['max_degree'] = 3
+    # number of additional hidden layers in the GCN. Total number of hidden layers: 1+depth
+    params['depth'] = args.depth
+    # seed for random initialisation
+    params['seed'] = args.seed
 
     # GCN Parameters
-    params['num_features'] = args.num_features      # number of features for feature selection step
-    params['num_training'] = args.num_training      # percentage of training set used for training
-    atlas = args.atlas                              # atlas for network construction (node definition)
-    connectivity = args.connectivity                # type of connectivity used for network construction
+    # number of features for feature selection step
+    params['num_features'] = args.num_features
+    # percentage of training set used for training
+    params['num_training'] = args.num_training
+    # atlas for network construction (node definition)
+    atlas = args.atlas
+    # type of connectivity used for network construction
+    connectivity = args.connectivity
 
     # Get class labels
     subject_IDs = Reader.get_ids()
@@ -173,10 +203,12 @@ def main():
         site[i] = unique.index(sites[subject_IDs[i]])
 
     # Compute feature vectors (vectorised connectivity networks)
-    features = Reader.get_networks(subject_IDs, kind=connectivity, atlas_name=atlas)
+    features = Reader.get_networks(
+        subject_IDs, kind=connectivity, atlas_name=atlas)
 
     # Compute population graph using gender and acquisition site
-    graph = Reader.create_affinity_graph_from_scores(['SEX', 'SITE_ID'], subject_IDs)
+    graph = Reader.create_affinity_graph_from_scores(
+        ['SEX', 'SITE_ID'], subject_IDs)
 
     # Folds for cross validation experiments
     skf = StratifiedKFold(n_splits=10)
@@ -195,7 +227,8 @@ def main():
         scores_auc_lin = [x[3] for x in scores]
         fold_size = [x[4] for x in scores]
 
-        print('overall linear accuracy %f' + str(np.sum(scores_lin) * 1. / num_nodes))
+        print('overall linear accuracy %f' +
+              str(np.sum(scores_lin) * 1. / num_nodes))
         print('overall linear AUC %f' + str(np.mean(scores_auc_lin)))
         print('overall accuracy %f' + str(np.sum(scores_acc) * 1. / num_nodes))
         print('overall AUC %f' + str(np.mean(scores_auc)))
@@ -210,18 +243,24 @@ def main():
         val = test
 
         scores_acc, scores_auc, scores_lin, scores_auc_lin, fold_size = train_fold(train, test, val, graph, features, y,
-                                                         y_data, params, subject_IDs)
+                                                                                   y_data, params, subject_IDs)
 
-        print('overall linear accuracy %f' + str(np.sum(scores_lin) * 1. / fold_size))
+        print('overall linear accuracy %f' +
+              str(np.sum(scores_lin) * 1. / fold_size))
         print('overall linear AUC %f' + str(np.mean(scores_auc_lin)))
         print('overall accuracy %f' + str(np.sum(scores_acc) * 1. / fold_size))
         print('overall AUC %f' + str(np.mean(scores_auc)))
 
     if args.save == 1:
-        result_name = 'ABIDE_classification.mat'
-        sio.savemat('./results/' + result_name ,
+        result_name = 'ABIDE_classification_LinearDiscriminantAnalysis_and_logistic_2000_10.mat'
+        sio.savemat('./results/' + result_name,
                     {'lin': scores_lin, 'lin_auc': scores_auc_lin,
-                     'acc': scores_acc, 'auc': scores_auc, 'folds': fold_size})
+                     'acc': scores_acc, 'auc': scores_auc, 'folds': fold_size,
+                     'overall linear accuracy': np.sum(scores_lin) * 1. / fold_size,
+                     'overall linear AUC': np.mean(scores_auc_lin),
+                     'overall accuracy': np.sum(scores_acc) * 1. / fold_size,
+                     'overall AUC': np.mean(scores_auc)})
+
 
 if __name__ == "__main__":
     main()
