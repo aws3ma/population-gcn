@@ -44,8 +44,7 @@ def get_train_test_masks(labels, idx_train, idx_val, idx_test):
     return y_train, y_val, y_test, train_mask, val_mask, test_mask
 
 
-def run_training(adj, features, labels, idx_train, idx_val, idx_test,
-                 params):
+def run_training(adj, features, labels, idx_train, idx_val, idx_test, params):
 
     # Set random seed
     random.seed(params['seed'])

@@ -29,6 +29,8 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis
+import matplotlib.pyplot as plt
+from sklearn.metrics import roc_curve
 import sklearn.metrics
 import scipy.io as sio
 
@@ -80,11 +82,18 @@ def train_fold(train_ind, test_ind, val_ind, graph_feat, features, y, y_data, pa
     final_graph = graph_feat * sparse_graph
     
     # Linear classifier
-    clf = LinearDiscriminantAnalysis()
+    clf = LogisticRegression()
     clf.fit(x_data[train_ind, :], y[train_ind].ravel())
     # Compute the accuracy
     lin_acc = clf.score(x_data[test_ind, :], y[test_ind].ravel())
     # Compute the AUC
+    y_pred_proba = clf.predict_proba(x_data[test_ind, :])
+    fpr, tpr, th = roc_curve(y[test_ind] - 1,  y_pred_proba[:,1])
+    plt.plot(fpr,tpr)
+    plt.ylabel('True Positive Rate')
+    plt.xlabel('False Positive Rate')
+    plt.legend(loc='lower right')
+    # plt.show()
     decision_function = getattr(clf, "decision_function", None)
     if callable(decision_function):
         pred = clf.decision_function(x_data[test_ind, :])
@@ -101,7 +110,7 @@ def train_fold(train_ind, test_ind, val_ind, graph_feat, features, y, y_data, pa
                                             test_ind, params)
 
     print(test_acc)
-
+    print(test_auc)
     # return number of correctly classified samples instead of percentage
     test_acc = int(round(test_acc * len(test_ind)))
     lin_acc = int(round(lin_acc * len(test_ind)))
@@ -132,7 +141,7 @@ def main():
                                                                         'training (default: 1.0)')
     parser.add_argument('--depth', default=0, type=int, help='Number of additional hidden layers in the GCN. '
                                                              'Total number of hidden layers: 1+depth (default: 0)')
-    parser.add_argument('--model', default='gcn_cheby', help='gcn model used (default: gcn_cheby, '
+    parser.add_argument('--model', default='gcn', help='gcn model used (default: gcn_cheby, '
                                                              'uses chebyshev polynomials, '
                                                              'options: gcn, gcn_cheby, dense )')
     parser.add_argument('--seed', default=123, type=int,
@@ -252,7 +261,7 @@ def main():
         print('overall AUC %f' + str(np.mean(scores_auc)))
 
     if args.save == 1:
-        result_name = 'ABIDE_classification_LinearDiscriminantAnalysis_and_logistic_2000_10.mat'
+        result_name = 'ABIDE_classification_logisticreg_and_logistic_2000_10.mat'
         sio.savemat('./results/' + result_name,
                     {'lin': scores_lin, 'lin_auc': scores_auc_lin,
                      'acc': scores_acc, 'auc': scores_auc, 'folds': fold_size,
